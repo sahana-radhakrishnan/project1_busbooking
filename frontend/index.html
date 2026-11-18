@@ -1,0 +1,626 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRANSITIQ | Smart Bus Reservation</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
+body{background:#f3f6fb;color:#172033}
+header{background:#101d3a;color:white;padding:20px 7%;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.logo{font-size:25px;font-weight:bold;letter-spacing:1px}
+.logo span{color:#36c6a0}
+nav button{background:transparent;color:white;border:none;margin-left:18px;cursor:pointer;font-size:14px}
+nav button:hover{color:#36c6a0}
+.hero{background:linear-gradient(120deg,#101d3a,#203d70);color:white;padding:55px 7%}
+.hero h1{font-size:38px;margin-bottom:12px}
+.hero p{color:#d5dfef;line-height:1.6}
+.container{width:86%;max-width:1150px;margin:30px auto}
+.card{background:white;padding:25px;border-radius:12px;box-shadow:0 4px 18px #15294b12;margin-bottom:24px}
+h2{margin-bottom:18px;color:#142747}
+h3{margin-bottom:10px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px}
+input,select{width:100%;padding:12px;border:1px solid #ccd5e2;border-radius:7px;margin-top:7px;outline:none}
+input:focus,select:focus{border-color:#237cbb}
+label{font-size:13px;font-weight:bold}
+.btn{background:#147d72;color:white;border:none;padding:12px 20px;border-radius:7px;cursor:pointer;margin-top:16px;font-weight:bold}
+.btn:hover{background:#0e6259}
+.secondary{background:#203d70}
+.danger{background:#d94c55}
+.bus-card{border:1px solid #dce3ed;padding:18px;border-radius:9px;margin-top:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px}
+.bus-card p{margin-top:7px;color:#657187;font-size:14px}
+.price{font-size:21px;font-weight:bold;color:#147d72}
+.seat-grid{display:grid;grid-template-columns:repeat(4,minmax(45px,65px));gap:12px;margin-top:20px}
+.seat{padding:13px 5px;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:bold}
+.available{background:#d9f5e9;color:#116b4a}
+.booked{background:#f7dada;color:#a22b35;cursor:not-allowed}
+.selected{background:#244b87;color:white}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px}
+.stat{background:#edf4fc;padding:20px;border-radius:9px}
+.stat strong{display:block;font-size:25px;margin-top:8px;color:#147d72}
+.message{margin-top:15px;padding:12px;border-radius:7px;display:none;line-height:1.5}
+.success{background:#dff5e9;color:#12653f}
+.error{background:#ffe5e5;color:#a32929}
+.hidden{display:none!important}
+footer{background:#101d3a;color:#cbd5e1;padding:22px;text-align:center;margin-top:50px;font-size:13px}
+.muted{color:#657187;line-height:1.6}
+@media(max-width:600px){
+    .hero h1{font-size:29px}
+    nav button{margin:5px}
+    .container{width:92%}
+}
+</style>
+</head>
+
+<body>
+
+<!-- The application remains hidden until passenger authentication is verified. -->
+<div id="appShell" class="hidden">
+
+<header>
+    <div class="logo">TRANSIT<span>IQ</span></div>
+    <nav>
+        <button onclick="showSection('searchSection')">Search Buses</button>
+        <button onclick="showSection('dashboardSection')">Dashboard</button>
+        <button onclick="logout()">Logout</button>
+    </nav>
+</header>
+
+<section class="hero">
+    <h1>Smart Transportation. Smarter Insights.</h1>
+    <p>Discover buses, reserve your seats and manage your journeys with TRANSITIQ.</p>
+    <p id="passengerWelcome" style="margin-top:12px"></p>
+</section>
+
+<main class="container">
+
+    <!-- BUS SEARCH -->
+    <section id="searchSection" class="card">
+        <h2>Find Your Bus</h2>
+
+        <div class="form-grid">
+            <div>
+                <label>From</label>
+                <input id="source" placeholder="Example: Erode">
+            </div>
+            <div>
+                <label>To</label>
+                <input id="destination" placeholder="Example: Coimbatore">
+            </div>
+            <div>
+                <label>Travel Date</label>
+                <input id="travelDate" type="date">
+            </div>
+        </div>
+
+        <button class="btn" onclick="searchBuses()">Search Buses</button>
+        <p id="searchMessage" class="message"></p>
+        <div id="busResults"></div>
+    </section>
+
+    <!-- SEAT SELECTION -->
+    <section id="seatSection" class="card hidden">
+        <h2>Select Your Seats</h2>
+        <p id="selectedBusInfo" class="muted"></p>
+
+        <div class="stats">
+            <div class="stat">Available Seats<strong id="availableCount">0</strong></div>
+            <div class="stat">Booked Seats<strong id="bookedCount">0</strong></div>
+            <div class="stat">Selected Seats<strong id="selectedCount">0</strong></div>
+        </div>
+
+        <div style="margin-top:20px">
+            <span>🟩 Available</span>
+            &nbsp;&nbsp;
+            <span>🟥 Booked</span>
+            &nbsp;&nbsp;
+            <span>🟦 Selected</span>
+        </div>
+
+        <div id="seatGrid" class="seat-grid"></div>
+        <p id="fareInfo" class="muted" style="margin-top:18px"></p>
+
+        <button class="btn" onclick="confirmBooking()">Confirm Booking</button>
+        <p id="bookingMessage" class="message"></p>
+    </section>
+
+    <!-- PASSENGER DASHBOARD -->
+    <section id="dashboardSection" class="card">
+        <h2>Passenger Dashboard</h2>
+        <p id="dashboardWelcome" class="muted"></p>
+        <div id="bookingDetails"></div>
+    </section>
+
+</main>
+
+<footer>
+    TRANSITIQ | Online Bus Reservation and Seat Cancellation System
+    <br><br>
+    DFA Workflow Validation | Network Communication | Data Analytics
+</footer>
+
+</div>
+
+<script>
+const API = "";
+
+let token = localStorage.getItem("transitiq_token") || "";
+let currentUser = null;
+
+try {
+    currentUser = JSON.parse(localStorage.getItem("transitiq_user") || "null");
+} catch (error) {
+    currentUser = null;
+}
+
+let selectedBus = null;
+let selectedSeats = [];
+let currentSeats = [];
+
+document.getElementById("travelDate").min =
+    new Date().toLocaleDateString("en-CA");
+
+/* AUTHENTICATION GUARD */
+async function verifyPassengerSession() {
+    if (!token || !currentUser) {
+        redirectToLogin();
+        return;
+    }
+
+    try {
+        const response = await fetch(API + "/api/auth/profile", {
+            method: "GET",
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error("Session expired or invalid.");
+        }
+
+        const data = await response.json();
+        const profile = data.user || data.profile;
+
+        if (!profile || profile.role !== "PASSENGER") {
+            throw new Error("Passenger access required.");
+        }
+
+        currentUser = {
+            ...currentUser,
+            ...profile
+        };
+
+        localStorage.setItem(
+            "transitiq_user",
+            JSON.stringify(currentUser)
+        );
+
+        document.getElementById("appShell").classList.remove("hidden");
+
+        document.getElementById("passengerWelcome").textContent =
+            "Welcome, " + (currentUser.name || currentUser.email) + "!";
+
+        document.getElementById("dashboardWelcome").textContent =
+            "Welcome, " + (currentUser.name || currentUser.email) + "!";
+
+        loadDashboard();
+
+    } catch (error) {
+        localStorage.removeItem("transitiq_token");
+        localStorage.removeItem("transitiq_user");
+        redirectToLogin();
+    }
+}
+
+function redirectToLogin() {
+    window.location.replace("login.html");
+}
+
+function logout() {
+    localStorage.removeItem("transitiq_token");
+    localStorage.removeItem("transitiq_user");
+
+    token = "";
+    currentUser = null;
+
+    window.location.replace("login.html");
+}
+
+/* GENERAL UI FUNCTIONS */
+function showSection(id) {
+    const section = document.getElementById(id);
+
+    if (section) {
+        section.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+    }
+}
+
+function showMessage(id, message, isError = false) {
+    const element = document.getElementById(id);
+    element.textContent = message;
+    element.className = "message " + (isError ? "error" : "success");
+    element.style.display = "block";
+}
+
+function hideMessage(id) {
+    document.getElementById(id).style.display = "none";
+}
+
+/* BUS SEARCH */
+async function searchBuses() {
+    hideMessage("searchMessage");
+
+    const source = document.getElementById("source").value.trim();
+    const destination = document.getElementById("destination").value.trim();
+    const date = document.getElementById("travelDate").value;
+
+    if (!source || !destination || !date) {
+        showMessage(
+            "searchMessage",
+            "Enter source, destination and travel date.",
+            true
+        );
+        return;
+    }
+
+    if (source.toLowerCase() === destination.toLowerCase()) {
+        showMessage(
+            "searchMessage",
+            "Source and destination cannot be the same.",
+            true
+        );
+        return;
+    }
+
+    try {
+        const params = new URLSearchParams({
+            source,
+            destination,
+            date
+        });
+
+        const response = await fetch(
+            API + "/api/buses/search?" + params
+        );
+
+        const data = await response.json();
+        const results = document.getElementById("busResults");
+        results.innerHTML = "";
+
+        if (!response.ok) {
+            throw new Error(data.message || "Bus search failed.");
+        }
+
+        if (!data.buses || data.buses.length === 0) {
+            showMessage(
+                "searchMessage",
+                "No buses found for this route and date.",
+                true
+            );
+            return;
+        }
+
+        data.buses.forEach(bus => {
+            const card = document.createElement("div");
+            card.className = "bus-card";
+
+            const details = document.createElement("div");
+
+            const name = document.createElement("h3");
+            name.textContent =
+                bus.bus_name + " (" + bus.bus_number + ")";
+
+            const route = document.createElement("p");
+            route.textContent =
+                bus.source_city + " → " + bus.destination_city;
+
+            const type = document.createElement("p");
+            type.textContent =
+                bus.bus_type + " | " +
+                new Date(bus.departure_datetime).toLocaleString();
+
+            const availability = document.createElement("p");
+            availability.textContent =
+                bus.available_seats + " seats available";
+
+            details.append(name, route, type, availability);
+
+            const action = document.createElement("div");
+
+            const price = document.createElement("div");
+            price.className = "price";
+            price.textContent =
+                "₹" + Number(bus.fare).toFixed(2);
+
+            const button = document.createElement("button");
+            button.className = "btn";
+            button.textContent = "Select Seats";
+            button.onclick = () => openSeats(bus);
+
+            action.append(price, button);
+            card.append(details, action);
+            results.appendChild(card);
+        });
+
+        showMessage(
+            "searchMessage",
+            data.count + " bus(es) found."
+        );
+
+    } catch (error) {
+        showMessage("searchMessage", error.message, true);
+    }
+}
+
+/* SEAT SELECTION */
+async function openSeats(bus) {
+    selectedBus = bus;
+    selectedSeats = [];
+
+    document.getElementById("seatSection").classList.remove("hidden");
+
+    document.getElementById("selectedBusInfo").textContent =
+        bus.bus_name + " | " +
+        bus.source_city + " to " +
+        bus.destination_city + " | ₹" +
+        bus.fare + " per seat";
+
+    await loadSeats();
+    showSection("seatSection");
+}
+
+async function loadSeats() {
+    if (!selectedBus) return;
+
+    try {
+        const response = await fetch(
+            API + "/api/seats/" + selectedBus.schedule_id
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || "Unable to load seats.");
+        }
+
+        currentSeats = data.seats;
+        selectedSeats = [];
+
+        document.getElementById("availableCount").textContent =
+            data.available_seats;
+
+        document.getElementById("bookedCount").textContent =
+            data.booked_seats;
+
+        document.getElementById("selectedCount").textContent = 0;
+
+        const grid = document.getElementById("seatGrid");
+        grid.innerHTML = "";
+
+        currentSeats.forEach(seat => {
+            const button = document.createElement("button");
+
+            button.className = "seat " +
+                (seat.seat_status === "BOOKED"
+                    ? "booked"
+                    : "available");
+
+            button.textContent = seat.seat_number;
+            button.disabled = seat.seat_status === "BOOKED";
+
+            button.onclick = () => {
+                const index = selectedSeats.indexOf(seat.seat_id);
+
+                if (index >= 0) {
+                    selectedSeats.splice(index, 1);
+                    button.className = "seat available";
+                } else {
+                    selectedSeats.push(seat.seat_id);
+                    button.className = "seat selected";
+                }
+
+                document.getElementById("selectedCount").textContent =
+                    selectedSeats.length;
+
+                document.getElementById("fareInfo").textContent =
+                    "Selected seats: " + selectedSeats.length +
+                    " | Total fare: ₹" +
+                    (
+                        selectedSeats.length *
+                        Number(selectedBus.fare)
+                    ).toFixed(2);
+            };
+
+            grid.appendChild(button);
+        });
+
+        document.getElementById("fareInfo").textContent =
+            "Fare per seat: ₹" +
+            Number(selectedBus.fare).toFixed(2);
+
+    } catch (error) {
+        showMessage("bookingMessage", error.message, true);
+    }
+}
+
+/* BOOKING */
+async function confirmBooking() {
+    if (!token) {
+        redirectToLogin();
+        return;
+    }
+
+    if (!selectedBus || selectedSeats.length === 0) {
+        showMessage(
+            "bookingMessage",
+            "Select at least one available seat.",
+            true
+        );
+        return;
+    }
+
+    try {
+        const response = await fetch(API + "/api/bookings", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            },
+            body: JSON.stringify({
+                schedule_id: selectedBus.schedule_id,
+                seat_ids: selectedSeats
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || "Booking failed.");
+        }
+
+        localStorage.setItem(
+            "transitiq_last_booking",
+            JSON.stringify(data.booking)
+        );
+
+        showMessage(
+            "bookingMessage",
+            "Booking confirmed! Reference: " +
+            data.booking.booking_reference +
+            " | Total: ₹" +
+            data.booking.total_amount
+        );
+
+        await loadSeats();
+        loadDashboard();
+
+    } catch (error) {
+        showMessage("bookingMessage", error.message, true);
+    }
+}
+
+/* PASSENGER DASHBOARD */
+async function loadDashboard() {
+    if (!currentUser) return;
+
+    const booking = JSON.parse(
+        localStorage.getItem("transitiq_last_booking") || "null"
+    );
+
+    const container = document.getElementById("bookingDetails");
+    container.innerHTML = "";
+
+    if (!booking) {
+        container.innerHTML =
+            '<p class="muted">No recent booking found in this browser.</p>';
+        return;
+    }
+
+    const card = document.createElement("div");
+    card.className = "bus-card";
+
+    const details = document.createElement("div");
+
+    const title = document.createElement("h3");
+    title.textContent = "Booking #" + booking.booking_id;
+
+    const reference = document.createElement("p");
+    reference.textContent =
+        "Reference: " + booking.booking_reference;
+
+    const seats = document.createElement("p");
+    seats.textContent =
+        "Seat IDs: " + booking.seat_ids.join(", ");
+
+    const amount = document.createElement("p");
+    amount.textContent =
+        "Total amount: ₹" + booking.total_amount;
+
+    details.append(title, reference, seats, amount);
+
+    const actions = document.createElement("div");
+
+    booking.seat_ids.forEach(seatId => {
+        const button = document.createElement("button");
+        button.className = "btn danger";
+        button.textContent = "Cancel seat " + seatId;
+        button.onclick = () => cancelSeat(booking, seatId);
+        actions.appendChild(button);
+    });
+
+    card.append(details, actions);
+    container.appendChild(card);
+}
+
+/* CANCELLATION */
+async function cancelSeat(booking, seatId) {
+    if (!confirm(
+        "Are you sure you want to cancel seat " + seatId + "?"
+    )) {
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            API + "/api/bookings/" +
+            booking.booking_id + "/cancel",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify({
+                    seat_ids: [seatId],
+                    reason: "Passenger requested cancellation"
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.message || "Cancellation failed."
+            );
+        }
+
+        booking.seat_ids =
+            booking.seat_ids.filter(id => id !== seatId);
+
+        booking.booking_status =
+            data.cancellation.booking_status;
+
+        localStorage.setItem(
+            "transitiq_last_booking",
+            JSON.stringify(booking)
+        );
+
+        alert("Seat cancelled successfully!");
+
+        loadDashboard();
+
+        if (
+            selectedBus &&
+            selectedBus.schedule_id === booking.schedule_id
+        ) {
+            await loadSeats();
+        }
+
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+/* START APPLICATION */
+verifyPassengerSession();
+</script>
+
+</body>
+</html>

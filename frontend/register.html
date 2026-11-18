@@ -1,0 +1,137 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRANSITIQ | Register</title>
+<style>
+*{box-sizing:border-box;font-family:Arial,sans-serif}
+body{margin:0;background:#f3f6fb;color:#172033;min-height:100vh;display:grid;place-items:center;padding:20px}
+.card{background:white;width:100%;max-width:440px;padding:32px;border-radius:14px;box-shadow:0 5px 25px #15294b18}
+.logo{text-align:center;font-size:27px;font-weight:bold;color:#101d3a;margin-bottom:8px}
+.logo span{color:#147d72}
+h2{text-align:center;margin:12px 0 25px;color:#142747}
+label{font-weight:bold;font-size:13px}
+input{width:100%;padding:13px;margin:8px 0 17px;border:1px solid #ccd5e2;border-radius:7px}
+button{width:100%;padding:13px;background:#147d72;color:white;border:0;border-radius:7px;font-weight:bold;cursor:pointer}
+button:hover{background:#0e6259}
+button:disabled{opacity:.6;cursor:not-allowed}
+a{color:#147d72;text-decoration:none}
+a:hover{text-decoration:underline}
+.links{text-align:center;line-height:2;margin-top:18px;font-size:14px}
+.message{padding:11px;border-radius:7px;margin-top:15px;display:none;font-size:14px;line-height:1.5}
+.error{display:block;background:#ffe5e5;color:#a32929}
+.success{display:block;background:#dff5e9;color:#12653f}
+</style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">TRANSIT<span>IQ</span></div>
+    <h2>Create Passenger Account</h2>
+
+    <form id="registerForm">
+        <label>Full Name</label>
+        <input id="name" required maxlength="100" placeholder="Enter your full name">
+
+        <label>Email Address</label>
+        <input id="email" type="email" required placeholder="Enter your email">
+
+        <label>Phone Number</label>
+        <input id="phone" type="tel" maxlength="15" placeholder="Enter phone number">
+
+        <label>Password</label>
+        <input id="password" type="password" required minlength="8" placeholder="Minimum 8 characters">
+
+        <label>Confirm Password</label>
+        <input id="confirmPassword" type="password" required minlength="8" placeholder="Re-enter password">
+
+        <button type="submit" id="registerButton">Create Account</button>
+    </form>
+
+    <div id="message" class="message"></div>
+
+    <div class="links">
+        Already registered? <a href="login.html">Login here</a><br>
+        <a href="admin-login.html">Admin Login</a>
+    </div>
+</div>
+
+<script>
+document.getElementById("registerForm").addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const message = document.getElementById("message");
+    const button = document.getElementById("registerButton");
+    message.className = "message";
+
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const password = document.getElementById("password").value;
+    const confirmPassword = document.getElementById("confirmPassword").value;
+
+    if (password !== confirmPassword) {
+        message.textContent = "Passwords do not match.";
+        message.className = "message error";
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Creating account...";
+
+    try {
+        const registerResponse = await fetch("/api/auth/register", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({name, email, phone, password})
+        });
+
+        const registerData = await registerResponse.json();
+
+        if (!registerResponse.ok) {
+            throw new Error(registerData.message || "Registration failed.");
+        }
+
+        message.textContent = "Account created! Logging you in...";
+        message.className = "message success";
+
+        const loginResponse = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({email, password})
+        });
+
+        const loginData = await loginResponse.json();
+
+        if (!loginResponse.ok) {
+            throw new Error(
+                "Account created successfully, but automatic login failed. Please login manually."
+            );
+        }
+
+        if (!loginData.token || !loginData.user ||
+            loginData.user.role !== "PASSENGER") {
+            throw new Error(
+                "Account created, but passenger login could not be completed. Please login manually."
+            );
+        }
+
+        localStorage.setItem("transitiq_token", loginData.token);
+        localStorage.setItem("transitiq_user", JSON.stringify(loginData.user));
+
+        message.textContent = "Registration successful! Opening TRANSITIQ...";
+        message.className = "message success";
+
+        window.location.replace("index.html");
+
+    } catch (error) {
+        message.textContent = error.message;
+        message.className = "message error";
+        button.disabled = false;
+        button.textContent = "Create Account";
+    }
+});
+</script>
+</body>
+</html>

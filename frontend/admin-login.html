@@ -1,0 +1,93 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRANSITIQ | Admin Login</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#eef2ff;font-family:Arial,sans-serif;color:#172554}
+.card{background:white;width:min(390px,90%);padding:32px;border-radius:15px;box-shadow:0 10px 35px #17255418}
+h1{margin:0 0 8px;text-align:center}
+p{text-align:center;color:#64748b;margin-bottom:25px}
+label{font-size:14px;font-weight:bold}
+input{width:100%;padding:13px;margin:8px 0 18px;border:1px solid #cbd5e1;border-radius:7px;font-size:15px}
+button{width:100%;padding:13px;background:#1d4ed8;color:white;border:0;border-radius:7px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
+#error{color:#dc2626;font-size:14px;min-height:20px;text-align:center}
+a{display:block;text-align:center;margin-top:20px;color:#1d4ed8;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="card">
+    <h1>TRANSITIQ</h1>
+    <p>Administrator Login</p>
+
+    <form id="adminLoginForm">
+        <label>Email Address</label>
+        <input type="email" id="email" required autocomplete="username"
+               placeholder="Admin email">
+
+        <label>Password</label>
+        <input type="password" id="password" required
+               autocomplete="current-password" placeholder="Password">
+
+        <button id="submitBtn" type="submit">Login as Administrator</button>
+    </form>
+
+    <div id="error"></div>
+    <a href="index.html">Back to Home</a>
+</div>
+
+<script>
+const form = document.getElementById("adminLoginForm");
+const errorBox = document.getElementById("error");
+const submitBtn = document.getElementById("submitBtn");
+
+// Do not reuse a previous admin session.
+// This page always requires fresh credentials.
+localStorage.removeItem("transitiq_admin_token");
+localStorage.removeItem("transitiq_admin_user");
+
+form.addEventListener("submit", async function(event) {
+    event.preventDefault();
+    errorBox.textContent = "";
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Verifying...";
+
+    try {
+        const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({
+                email: document.getElementById("email").value.trim(),
+                password: document.getElementById("password").value
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || "Login failed.");
+        }
+
+        if (!data.user || data.user.role !== "ADMIN") {
+            throw new Error("Access denied. Administrator account required.");
+        }
+
+        // Store the admin session separately from passenger login.
+        localStorage.setItem("transitiq_admin_token", data.token);
+        localStorage.setItem("transitiq_admin_user", JSON.stringify(data.user));
+
+        window.location.replace("admin.html");
+
+    } catch(error) {
+        errorBox.textContent = error.message;
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Login as Administrator";
+    }
+});
+</script>
+</body>
+</html>

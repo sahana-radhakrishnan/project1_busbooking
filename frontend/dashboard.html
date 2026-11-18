@@ -1,0 +1,414 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRANSITIQ | Analytics Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        header {
+            background: #102a43;
+            color: white;
+            padding: 22px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        header h1 {
+            font-size: 25px;
+        }
+
+        header p {
+            color: #cbd5e1;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        button, .back-link {
+            border: none;
+            padding: 10px 16px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        button {
+            background: #38bdf8;
+            color: #082f49;
+        }
+
+        .back-link {
+            background: white;
+            color: #102a43;
+        }
+
+        main {
+            max-width: 1250px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .page-heading {
+            margin-bottom: 22px;
+        }
+
+        .page-heading h2 {
+            font-size: 24px;
+        }
+
+        .page-heading p {
+            color: #64748b;
+            margin-top: 7px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 22px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-left: 4px solid #0284c7;
+        }
+
+        .stat-card p {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .stat-card h3 {
+            font-size: 28px;
+            margin-top: 12px;
+            color: #102a43;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 22px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 22px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            min-width: 0;
+        }
+
+        .chart-card h3 {
+            font-size: 17px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 280px;
+        }
+
+        #message {
+            margin-bottom: 18px;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 25px;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        @media(max-width: 850px) {
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media(max-width: 480px) {
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 21px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <div>
+        <h1>TRANSITIQ</h1>
+        <p>Smart Transportation. Smarter Insights.</p>
+    </div>
+
+    <div class="header-actions">
+        <a class="back-link" href="/">Passenger Portal</a>
+        <button onclick="loadAnalytics()">Refresh Data</button>
+    </div>
+</header>
+
+<main>
+
+    <div class="page-heading">
+        <h2>Data Analytics Dashboard</h2>
+        <p>Real-time booking and transportation insights</p>
+    </div>
+
+    <div id="message">Loading analytics data...</div>
+
+    <section class="summary-grid">
+
+        <div class="stat-card">
+            <p>Total Bookings</p>
+            <h3 id="totalBookings">--</h3>
+        </div>
+
+        <div class="stat-card">
+            <p>Active Booking Revenue</p>
+            <h3 id="totalRevenue">--</h3>
+        </div>
+
+        <div class="stat-card">
+            <p>Currently Booked Seats</p>
+            <h3 id="bookedSeats">--</h3>
+        </div>
+
+        <div class="stat-card">
+            <p>Cancellation Rate</p>
+            <h3 id="cancellationRate">--</h3>
+        </div>
+
+    </section>
+
+    <section class="charts-grid">
+
+        <div class="chart-card">
+            <h3>Daily Booking Trend</h3>
+            <div class="chart-container">
+                <canvas id="dailyChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Popular Routes</h3>
+            <div class="chart-container">
+                <canvas id="routeChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Booking Status Distribution</h3>
+            <div class="chart-container">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Bus-wise Seat Occupancy</h3>
+            <div class="chart-container">
+                <canvas id="occupancyChart"></canvas>
+            </div>
+        </div>
+
+    </section>
+
+</main>
+
+<footer>
+    TRANSITIQ | Online Bus Reservation and Data Analytics System
+</footer>
+
+<script>
+    let charts = {};
+
+    function createChart(id, type, labels, datasets, options = {}) {
+        const canvas = document.getElementById(id);
+
+        if (charts[id]) {
+            charts[id].destroy();
+        }
+
+        charts[id] = new Chart(canvas, {
+            type: type,
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: type === "doughnut",
+                        position: "bottom"
+                    }
+                },
+                ...options
+            }
+        });
+    }
+
+    async function loadAnalytics() {
+        const message = document.getElementById("message");
+
+        message.textContent = "Loading latest analytics...";
+
+        try {
+            const response = await fetch("/api/analytics");
+
+            const data = await response.json();
+
+            if (!response.ok || data.status !== "success") {
+                throw new Error(data.message || "Unable to load analytics");
+            }
+
+            // Summary cards
+            document.getElementById("totalBookings").textContent =
+                data.summary.total_bookings;
+
+            document.getElementById("totalRevenue").textContent =
+                "₹" + Number(data.summary.total_revenue).toLocaleString("en-IN");
+
+            document.getElementById("bookedSeats").textContent =
+                data.summary.booked_seats;
+
+            document.getElementById("cancellationRate").textContent =
+                data.summary.cancellation_rate + "%";
+
+            // Daily booking trend
+            createChart(
+                "dailyChart",
+                "line",
+                data.daily_bookings.map(item =>
+                    new Date(item.booking_day).toLocaleDateString("en-IN")
+                ),
+                [{
+                    label: "Bookings",
+                    data: data.daily_bookings.map(item =>
+                        Number(item.total_bookings)
+                    ),
+                    borderWidth: 3,
+                    tension: 0.3,
+                    fill: false
+                }]
+            );
+
+            // Popular routes
+            createChart(
+                "routeChart",
+                "bar",
+                data.routes.map(item =>
+                    item.source_city + " → " + item.destination_city
+                ),
+                [{
+                    label: "Bookings",
+                    data: data.routes.map(item =>
+                        Number(item.total_bookings)
+                    ),
+                    borderWidth: 1
+                }],
+                {
+                    indexAxis: "y",
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            );
+
+            // Booking status
+            createChart(
+                "statusChart",
+                "doughnut",
+                data.booking_status.map(item => item.booking_status),
+                [{
+                    label: "Bookings",
+                    data: data.booking_status.map(item =>
+                        Number(item.total)
+                    )
+                }]
+            );
+
+            // Bus occupancy
+            createChart(
+                "occupancyChart",
+                "bar",
+                data.bus_occupancy.map(item => item.bus_name),
+                [{
+                    label: "Occupancy %",
+                    data: data.bus_occupancy.map(item =>
+                        Number(item.occupancy_percentage)
+                    ),
+                    borderWidth: 1
+                }],
+                {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: value => value + "%"
+                            }
+                        }
+                    }
+                }
+            );
+
+            message.textContent =
+                "Analytics loaded successfully from the TRANSITIQ database.";
+
+        } catch (error) {
+            console.error(error);
+            message.textContent =
+                "Error loading analytics: " + error.message;
+        }
+    }
+
+    loadAnalytics();
+</script>
+
+</body>
+</html>
