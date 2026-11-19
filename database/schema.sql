@@ -116,3 +116,14 @@ CREATE TABLE cancellations (
     FOREIGN KEY (booking_seat_id)
         REFERENCES booking_seats(booking_seat_id)
 );
+
+-- 9. PASSWORD RESET OTP TABLE
+CREATE TABLE password_reset_otps (
+    reset_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    otp_hash VARCHAR(255) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
